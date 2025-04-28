@@ -1,370 +1,323 @@
-"use client"
-
-import { Calendar } from "@/components/ui/calendar"
-
-import { useState } from "react"
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch, Image } from "react-native"
-import { Mail, Bell, Moon, ChevronRight, LogOut, Trash2, HelpCircle, Shield, Info } from "lucide-react-native"
-import { useTheme } from "../context/ThemeContext"
-import { mockUserProfile } from "../data/mockData"
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Switch,
+  Alert,
+  ActivityIndicator,
+  ScrollView,
+} from "react-native";
+import {
+  LogOut,
+  Moon,
+  Sun,
+  ChevronRight,
+  HelpCircle,
+  Shield,
+  Info,
+  Bell,
+} from "lucide-react-native";
+import { useAuth } from "../hooks/useAuth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const SettingsScreen = () => {
-  const { colors, theme, setTheme, isDark } = useTheme()
-  const [profile, setProfile] = useState(mockUserProfile)
-  const [editMode, setEditMode] = useState(false)
+  const { user, logout } = useAuth();
+  const [darkMode, setDarkMode] = useState(false);
+  const [notifications, setNotifications] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  const handleThemeToggle = () => {
-    setTheme(isDark ? "light" : "dark")
+  const handleLogout = async () => {
+    Alert.alert("Log Out", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Log Out",
+        onPress: async () => {
+          setLoading(true);
+          try {
+            await logout();
+            // Navigation will be handled by the AuthContext
+          } catch (error: any) {
+            Alert.alert("Error", error.message);
+          } finally {
+            setLoading(false);
+          }
+        },
+        style: "destructive",
+      },
+    ]);
+  };
+
+  const toggleDarkMode = async (value: boolean) => {
+    setDarkMode(value);
+    // You can implement theme switching logic here
+    try {
+      await AsyncStorage.setItem("@theme_mode", value ? "dark" : "light");
+    } catch (error) {
+      console.log("Error saving theme preference", error);
+    }
+  };
+
+  const toggleNotifications = async (value: boolean) => {
+    setNotifications(value);
+    try {
+      await AsyncStorage.setItem("@notifications_enabled", String(value));
+    } catch (error) {
+      console.log("Error saving notification preference", error);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently lost.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete Account",
+          onPress: () => {
+            Alert.alert(
+              "Feature Coming Soon",
+              "Account deletion functionality will be available in a future update."
+            );
+          },
+          style: "destructive",
+        },
+      ]
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#3b82f6" />
+      </View>
+    );
   }
-
-  const handleSaveProfile = () => {
-    console.log("Saving profile:", profile)
-    setEditMode(false)
-  }
-
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    header: {
-      padding: 16,
-      paddingTop: 60,a
-      backgroundColor: colors.primary,
-      alignItems: "center",
-    },
-    headerTitle: {
-      fontSize: 24,
-      fontWeight: "700",
-      color: "#fff",
-      marginBottom: 16,
-    },
-    profileSection: {
-      alignItems: "center",
-      marginBottom: 16,
-    },
-    avatar: {
-      width: 100,
-      height: 100,
-      borderRadius: 50,
-      backgroundColor: colors.card,
-      justifyContent: "center",
-      alignItems: "center",
-      marginBottom: 16,
-      borderWidth: 3,
-      borderColor: "#fff",
-    },
-    avatarText: {
-      fontSize: 36,
-      fontWeight: "700",
-      color: colors.primary,
-    },
-    userName: {
-      fontSize: 20,
-      fontWeight: "700",
-      color: "#fff",
-    },
-    userEmail: {
-      fontSize: 14,
-      color: "rgba(255, 255, 255, 0.8)",
-    },
-    content: {
-      flex: 1,
-      padding: 16,
-    },
-    section: {
-      marginBottom: 24,
-    },
-    sectionTitle: {
-      fontSize: 18,
-      fontWeight: "600",
-      color: colors.text,
-      marginBottom: 16,
-    },
-    card: {
-      backgroundColor: colors.card,
-      borderRadius: 12,
-      padding: 16,
-      marginBottom: 16,
-      shadowColor: colors.text,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    inputGroup: {
-      marginBottom: 16,
-    },
-    label: {
-      fontSize: 14,
-      color: colors.muted,
-      marginBottom: 8,
-    },
-    input: {
-      backgroundColor: colors.background,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: colors.border,
-      padding: 12,
-      fontSize: 16,
-      color: colors.text,
-    },
-    settingItem: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    settingItemLast: {
-      borderBottomWidth: 0,
-    },
-    settingLabel: {
-      fontSize: 16,
-      color: colors.text,
-      flex: 1,
-      marginLeft: 12,
-    },
-    iconContainer: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: colors.primary + "20",
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    dangerZone: {
-      backgroundColor: colors.error + "10",
-      borderColor: colors.error + "30",
-    },
-    dangerButton: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingVertical: 12,
-    },
-    dangerText: {
-      fontSize: 16,
-      color: colors.error,
-      marginLeft: 12,
-    },
-    saveButton: {
-      backgroundColor: colors.primary,
-      borderRadius: 8,
-      padding: 16,
-      alignItems: "center",
-      marginTop: 8,
-    },
-    saveButtonText: {
-      color: "#fff",
-      fontSize: 16,
-      fontWeight: "600",
-    },
-    editButton: {
-      position: "absolute",
-      right: 16,
-      top: 60,
-      backgroundColor: "rgba(255, 255, 255, 0.2)",
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 16,
-    },
-    editButtonText: {
-      color: "#fff",
-      fontWeight: "600",
-    },
-  })
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Settings</Text>
+        <Text style={styles.title}>Settings</Text>
+      </View>
 
-        <View style={styles.profileSection}>
-          <View style={styles.avatar}>
-            {profile.avatar ? (
-              <Image source={{ uri: profile.avatar }} style={{ width: 100, height: 100, borderRadius: 50 }} />
-            ) : (
-              <Text style={styles.avatarText}>{profile.name.charAt(0)}</Text>
-            )}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Account</Text>
+        <View style={styles.profileContainer}>
+          <View style={styles.profileInfo}>
+            <Text style={styles.profileName}>
+              {user?.displayName || "User"}
+            </Text>
+            <Text style={styles.profileEmail}>{user?.email}</Text>
           </View>
-          <Text style={styles.userName}>{profile.name}</Text>
-          <Text style={styles.userEmail}>{profile.email}</Text>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Preferences</Text>
+        <View style={styles.settingItem}>
+          <View style={styles.settingItemLeft}>
+            {darkMode ? (
+              <Moon size={22} color="#64748b" />
+            ) : (
+              <Sun size={22} color="#64748b" />
+            )}
+            <Text style={styles.settingText}>Dark Mode</Text>
+          </View>
+          <Switch
+            value={darkMode}
+            onValueChange={toggleDarkMode}
+            trackColor={{ false: "#cbd5e1", true: "#93c5fd" }}
+            thumbColor={darkMode ? "#3b82f6" : "#f4f4f5"}
+          />
         </View>
 
-        <TouchableOpacity style={styles.editButton} onPress={() => setEditMode(!editMode)}>
-          <Text style={styles.editButtonText}>{editMode ? "Cancel" : "Edit Profile"}</Text>
+        <View style={styles.settingItem}>
+          <View style={styles.settingItemLeft}>
+            <Bell size={22} color="#64748b" />
+            <Text style={styles.settingText}>Notifications</Text>
+          </View>
+          <Switch
+            value={notifications}
+            onValueChange={toggleNotifications}
+            trackColor={{ false: "#cbd5e1", true: "#93c5fd" }}
+            thumbColor={notifications ? "#3b82f6" : "#f4f4f5"}
+          />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Support</Text>
+        <TouchableOpacity style={styles.navigationItem}>
+          <View style={styles.navigationItemLeft}>
+            <HelpCircle size={22} color="#64748b" />
+            <Text style={styles.navigationText}>Help & Support</Text>
+          </View>
+          <ChevronRight size={18} color="#94a3b8" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.navigationItem}>
+          <View style={styles.navigationItemLeft}>
+            <Shield size={22} color="#64748b" />
+            <Text style={styles.navigationText}>Privacy Policy</Text>
+          </View>
+          <ChevronRight size={18} color="#94a3b8" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.navigationItem}>
+          <View style={styles.navigationItemLeft}>
+            <Info size={22} color="#64748b" />
+            <Text style={styles.navigationText}>About</Text>
+          </View>
+          <ChevronRight size={18} color="#94a3b8" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {editMode ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Edit Profile</Text>
-            <View style={styles.card}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Name</Text>
-                <TextInput
-                  style={styles.input}
-                  value={profile.name}
-                  onChangeText={(text) => setProfile({ ...profile, name: text })}
-                />
-              </View>
+      <View style={styles.section}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <LogOut size={22} color="#ef4444" />
+          <Text style={styles.logoutText}>Log Out</Text>
+        </TouchableOpacity>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email</Text>
-                <TextInput
-                  style={styles.input}
-                  value={profile.email}
-                  onChangeText={(text) => setProfile({ ...profile, email: text })}
-                  keyboardType="email-address"
-                />
-              </View>
+        <TouchableOpacity
+          style={styles.deleteAccountButton}
+          onPress={handleDeleteAccount}
+        >
+          <Text style={styles.deleteAccountText}>Delete Account</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+};
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Phone</Text>
-                <TextInput
-                  style={styles.input}
-                  value={profile.phone}
-                  onChangeText={(text) => setProfile({ ...profile, phone: text })}
-                  keyboardType="phone-pad"
-                />
-              </View>
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#f8fafc",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  header: {
+    padding: 16,
+    backgroundColor: "#fff",
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#0f172a",
+  },
+  section: {
+    backgroundColor: "#fff",
+    marginTop: 16,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: "#e2e8f0",
+    paddingHorizontal: 16,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748b",
+    marginVertical: 12,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  profileContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+  },
+  profileAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#e2e8f0",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  avatarInitial: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#64748b",
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  profileName: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#0f172a",
+    marginBottom: 4,
+  },
+  profileEmail: {
+    fontSize: 14,
+    color: "#64748b",
+  },
+  settingItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+  },
+  settingItemLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  settingText: {
+    fontSize: 16,
+    color: "#0f172a",
+    marginLeft: 12,
+  },
+  navigationItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+  },
+  navigationItemLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  navigationText: {
+    fontSize: 16,
+    color: "#0f172a",
+    marginLeft: 12,
+  },
+  logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    marginVertical: 16,
+    backgroundColor: "#fee2e2",
+    borderRadius: 8,
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#ef4444",
+    marginLeft: 8,
+  },
+  deleteAccountButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    marginBottom: 16,
+  },
+  deleteAccountText: {
+    fontSize: 14,
+    color: "#64748b",
+    textDecorationLine: "underline",
+  },
+});
 
-              <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
-                <Text style={styles.saveButtonText}>Save Changes</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          <>
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Notification Preferences</Text>
-              <View style={styles.card}>
-                <View style={styles.settingItem}>
-                  <View style={styles.iconContainer}>
-                    <Bell size={18} color={colors.primary} />
-                  </View>
-                  <Text style={styles.settingLabel}>Push Notifications</Text>
-                  <Switch
-                    value={profile.notificationPreferences.push}
-                    onValueChange={(value) =>
-                      setProfile({
-                        ...profile,
-                        notificationPreferences: {
-                          ...profile.notificationPreferences,
-                          push: value,
-                        },
-                      })
-                    }
-                    trackColor={{ false: colors.border, true: colors.primary + "70" }}
-                    thumbColor={profile.notificationPreferences.push ? colors.primary : colors.muted}
-                  />
-                </View>
-
-                <View style={styles.settingItem}>
-                  <View style={styles.iconContainer}>
-                    <Mail size={18} color={colors.primary} />
-                  </View>
-                  <Text style={styles.settingLabel}>Email Notifications</Text>
-                  <Switch
-                    value={profile.notificationPreferences.email}
-                    onValueChange={(value) =>
-                      setProfile({
-                        ...profile,
-                        notificationPreferences: {
-                          ...profile.notificationPreferences,
-                          email: value,
-                        },
-                      })
-                    }
-                    trackColor={{ false: colors.border, true: colors.primary + "70" }}
-                    thumbColor={profile.notificationPreferences.email ? colors.primary : colors.muted}
-                  />
-                </View>
-
-                <View style={[styles.settingItem, styles.settingItemLast]}>
-                  <View style={styles.iconContainer}>
-                    <Calendar size={18} color={colors.primary} />
-                  </View>
-                  <Text style={styles.settingLabel}>Reminder Days in Advance</Text>
-                  <Text style={{ color: colors.text, fontWeight: "600" }}>
-                    {profile.notificationPreferences.reminderDays} days
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>App Settings</Text>
-              <View style={styles.card}>
-                <View style={styles.settingItem}>
-                  <View style={styles.iconContainer}>
-                    <Moon size={18} color={colors.primary} />
-                  </View>
-                  <Text style={styles.settingLabel}>Dark Mode</Text>
-                  <Switch
-                    value={isDark}
-                    onValueChange={handleThemeToggle}
-                    trackColor={{ false: colors.border, true: colors.primary + "70" }}
-                    thumbColor={isDark ? colors.primary : colors.muted}
-                  />
-                </View>
-
-                <View style={[styles.settingItem, styles.settingItemLast]}>
-                  <View style={styles.iconContainer}>
-                    <Info size={18} color={colors.primary} />
-                  </View>
-                  <Text style={styles.settingLabel}>App Version</Text>
-                  <Text style={{ color: colors.muted }}>1.0.0</Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Support</Text>
-              <View style={styles.card}>
-                <TouchableOpacity style={styles.settingItem}>
-                  <View style={styles.iconContainer}>
-                    <HelpCircle size={18} color={colors.primary} />
-                  </View>
-                  <Text style={styles.settingLabel}>Help & Support</Text>
-                  <ChevronRight size={20} color={colors.muted} />
-                </TouchableOpacity>
-
-                <TouchableOpacity style={[styles.settingItem, styles.settingItemLast]}>
-                  <View style={styles.iconContainer}>
-                    <Shield size={18} color={colors.primary} />
-                  </View>
-                  <Text style={styles.settingLabel}>Privacy Policy</Text>
-                  <ChevronRight size={20} color={colors.muted} />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Account</Text>
-              <View style={[styles.card, styles.dangerZone]}>
-                <TouchableOpacity style={styles.dangerButton}>
-                  <Trash2 size={20} color={colors.error} />
-                  <Text style={styles.dangerText}>Delete All Data</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={[styles.dangerButton, { marginTop: 12 }]}>
-                  <LogOut size={20} color={colors.error} />
-                  <Text style={styles.dangerText}>Sign Out</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </>
-        )}
-
-        <View style={{ height: 40 }} />
-      </ScrollView>
-    </View>
-  )
-}
-
-export default SettingsScreen
+export default SettingsScreen;

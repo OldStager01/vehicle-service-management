@@ -1,200 +1,367 @@
-"use client"
-
-import { useState } from "react"
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from "react-native"
-import { useNavigation } from "@react-navigation/native"
-import { Plus, Search, Filter } from "lucide-react-native"
-import { useTheme } from "../context/ThemeContext"
-import VehicleCard from "../components/VehicleCard"
-import { mockVehicles } from "../data/mockData"
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Image,
+  RefreshControl,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Car, Plus, Info, Edit, Trash2 } from "lucide-react-native";
+import { useNavigation } from "@react-navigation/native";
+import { useVehicles } from "../hooks/useFirestore";
 
 const VehicleListScreen = () => {
-  const navigation = useNavigation()
-  const { colors } = useTheme()
-  const [searchQuery, setSearchQuery] = useState("")
-  const [filterVisible, setFilterVisible] = useState(false)
-  const [vehicleType, setVehicleType] = useState<string | null>(null)
+  const navigation = useNavigation();
+  const { vehicles, loading, error, refresh, deleteVehicle } = useVehicles();
+  const [refreshing, setRefreshing] = useState(false);
 
-  const filteredVehicles = mockVehicles.filter((vehicle) => {
-    const matchesSearch =
-      vehicle.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vehicle.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vehicle.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vehicle.registrationNumber.toLowerCase().includes(searchQuery.toLowerCase())
+  // Debug logging
+  useEffect(() => {
+    console.log("Vehicle data in component:", vehicles);
+  }, [vehicles]);
 
-    const matchesType = vehicleType ? vehicle.type === vehicleType : true
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  };
 
-    return matchesSearch && matchesType
-  })
+  const handleAddVehicle = () => {
+    navigation.navigate("AddEditVehicle", {});
+  };
 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    header: {
-      padding: 16,
-      paddingTop: 60,
-      backgroundColor: colors.primary,
-    },
-    headerTitle: {
-      fontSize: 24,
-      fontWeight: "700",
-      color: "#fff",
-    },
-    searchContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: colors.card,
-      borderRadius: 12,
-      marginHorizontal: 16,
-      marginTop: -20,
-      padding: 12,
-      shadowColor: colors.text,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    searchInput: {
-      flex: 1,
-      fontSize: 16,
-      color: colors.text,
-      marginLeft: 8,
-    },
-    filterButton: {
-      marginLeft: 8,
-      padding: 4,
-    },
-    content: {
-      flex: 1,
-      padding: 16,
-      paddingTop: 24,
-    },
-    filterContainer: {
-      flexDirection: "row",
-      marginBottom: 16,
-      justifyContent: "space-between",
-    },
-    filterChip: {
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 20,
-      marginRight: 8,
-      borderWidth: 1,
-    },
-    filterChipText: {
-      fontSize: 14,
-      fontWeight: "500",
-    },
-    activeFilterChip: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
-    },
-    activeFilterChipText: {
-      color: "#fff",
-    },
-    inactiveFilterChip: {
-      backgroundColor: "transparent",
-      borderColor: colors.border,
-    },
-    inactiveFilterChipText: {
-      color: colors.text,
-    },
-    emptyState: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-      padding: 24,
-    },
-    emptyStateText: {
-      fontSize: 16,
-      color: colors.muted,
-      textAlign: "center",
-      marginTop: 12,
-    },
-    addButton: {
-      position: "absolute",
-      right: 16,
-      bottom: 16,
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: colors.primary,
-      justifyContent: "center",
-      alignItems: "center",
-      shadowColor: colors.text,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.3,
-      shadowRadius: 3,
-      elevation: 5,
-    },
-  })
+  const handleServiceHistory = (vehicleId, make, model) => {
+    navigation.navigate("ServiceHistory", {
+      vehicleId,
+      vehicleName: `${make} ${model}`,
+    });
+  };
 
-  const renderFilterChip = (type: string, label: string) => {
-    const isActive = vehicleType === type
+  const handleEditVehicle = (vehicle) => {
+    navigation.navigate("AddEditVehicle", { vehicle });
+  };
+
+  const confirmDeleteVehicle = (id, make, model) => {
+    Alert.alert(
+      "Delete Vehicle",
+      `Are you sure you want to delete ${make} ${model}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          onPress: () => handleDeleteVehicle(id),
+          style: "destructive",
+        },
+      ]
+    );
+  };
+
+  const handleDeleteVehicle = async (id) => {
+    try {
+      await deleteVehicle(id);
+      Alert.alert("Success", "Vehicle deleted successfully");
+    } catch (error) {
+      Alert.alert("Error", error.message);
+    }
+  };
+
+  // Loading state
+  if (loading && !refreshing) {
     return (
-      <TouchableOpacity
-        style={[styles.filterChip, isActive ? styles.activeFilterChip : styles.inactiveFilterChip]}
-        onPress={() => setVehicleType(isActive ? null : type)}
-      >
-        <Text style={[styles.filterChipText, isActive ? styles.activeFilterChipText : styles.inactiveFilterChipText]}>
-          {label}
-        </Text>
-      </TouchableOpacity>
-    )
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#3b82f6" />
+      </View>
+    );
   }
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Your Vehicles</Text>
-      </View>
+  // Render vehicle card
+  const renderVehicleItem = ({ item }) => {
+    // Ensure we have all necessary data
+    const vehicleId = item?.id || "";
+    const make = item?.make || "Unknown";
+    const model = item?.model || "Vehicle";
+    const licensePlate = item?.licensePlate || "No plate";
+    const year = item?.year || "";
+    const imageUrl = item?.imageUrl;
 
-      <View style={styles.searchContainer}>
-        <Search size={20} color={colors.muted} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search vehicles..."
-          placeholderTextColor={colors.muted}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        <TouchableOpacity style={styles.filterButton} onPress={() => setFilterVisible(!filterVisible)}>
-          <Filter size={20} color={filterVisible || vehicleType ? colors.primary : colors.muted} />
+    return (
+      <View style={styles.card}>
+        <View style={styles.vehicleHeader}>
+          <View style={styles.vehicleInfo}>
+            {/* Vehicle Image */}
+            {imageUrl ? (
+              <Image
+                source={{ uri: imageUrl }}
+                style={styles.vehicleImage}
+                defaultSource={require("../assets/car-placeholder.png")}
+              />
+            ) : (
+              <View style={styles.placeholderImage}>
+                <Car size={24} color="#94a3b8" />
+              </View>
+            )}
+
+            {/* Vehicle Details */}
+            <View style={styles.vehicleDetails}>
+              <Text style={styles.vehicleName}>
+                {make} {model}
+              </Text>
+              <Text style={styles.vehiclePlate}>{licensePlate}</Text>
+              {year && <Text style={styles.vehicleYear}>{year}</Text>}
+            </View>
+          </View>
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.infoButton]}
+            onPress={() => handleServiceHistory(vehicleId, make, model)}
+          >
+            <Info size={16} color="#3b82f6" />
+            <Text style={styles.actionText}>Service History</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionButton, styles.editButton]}
+            onPress={() => handleEditVehicle(item)}
+          >
+            <Edit size={16} color="#10b981" />
+            <Text style={[styles.actionText, { color: "#10b981" }]}>Edit</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionButton, styles.deleteButton]}
+            onPress={() => confirmDeleteVehicle(vehicleId, make, model)}
+          >
+            <Trash2 size={16} color="#ef4444" />
+            <Text style={[styles.actionText, { color: "#ef4444" }]}>
+              Delete
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header with Add Button */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Your Vehicles</Text>
+        <TouchableOpacity style={styles.addButton} onPress={handleAddVehicle}>
+          <Plus size={24} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.content}>
-        {filterVisible && (
-          <View style={styles.filterContainer}>
-            {renderFilterChip("car", "Cars")}
-            {renderFilterChip("bike", "Bikes")}
-            {renderFilterChip("scooter", "Scooters")}
-          </View>
-        )}
+      {/* Handle Error State */}
+      {error ? (
+        <View style={styles.messageContainer}>
+          <Text style={styles.errorText}>Error: {error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={refresh}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : vehicles.length === 0 ? (
+        /* Handle Empty State */
+        <View style={styles.messageContainer}>
+          <Car size={64} color="#cbd5e1" />
+          <Text style={styles.emptyText}>No vehicles added yet</Text>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleAddVehicle}
+          >
+            <Text style={styles.buttonText}>Add Your First Vehicle</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        /* Vehicle List */
+        <FlatList
+          data={vehicles}
+          keyExtractor={(item) => item.id || Math.random().toString()}
+          renderItem={renderVehicleItem}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          contentContainerStyle={styles.listContent}
+          ListHeaderComponent={
+            <Text style={styles.countText}>
+              {vehicles.length} {vehicles.length === 1 ? "vehicle" : "vehicles"}{" "}
+              found
+            </Text>
+          }
+        />
+      )}
+    </SafeAreaView>
+  );
+};
 
-        {filteredVehicles.length > 0 ? (
-          <FlatList
-            data={filteredVehicles}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <VehicleCard vehicle={item} />}
-            showsVerticalScrollIndicator={false}
-          />
-        ) : (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No vehicles found. Try adjusting your search or filters.</Text>
-          </View>
-        )}
-      </View>
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#f8fafc",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#1e293b",
+  },
+  addButton: {
+    backgroundColor: "#3b82f6",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.5,
+  },
+  listContent: {
+    padding: 16,
+  },
+  countText: {
+    fontSize: 14,
+    color: "#64748b",
+    marginBottom: 8,
+  },
+  card: {
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    marginBottom: 16,
+    padding: 16,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  vehicleHeader: {
+    marginBottom: 16,
+  },
+  vehicleInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  vehicleImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: "#f1f5f9",
+    marginRight: 12,
+  },
+  placeholderImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  vehicleDetails: {
+    flex: 1,
+  },
+  vehicleName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1e293b",
+    marginBottom: 4,
+  },
+  vehiclePlate: {
+    fontSize: 14,
+    color: "#475569",
+    marginBottom: 2,
+  },
+  vehicleYear: {
+    fontSize: 14,
+    color: "#64748b",
+  },
+  actionButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 10,
+    borderRadius: 8,
+    flex: 1,
+    justifyContent: "center",
+    marginHorizontal: 4,
+  },
+  infoButton: {
+    backgroundColor: "#eff6ff",
+  },
+  editButton: {
+    backgroundColor: "#ecfdf5",
+  },
+  deleteButton: {
+    backgroundColor: "#fef2f2",
+  },
+  actionText: {
+    marginLeft: 6,
+    fontWeight: "600",
+    fontSize: 12,
+    color: "#3b82f6",
+  },
+  messageContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#64748b",
+    marginTop: 16,
+    marginBottom: 24,
+    textAlign: "center",
+  },
+  errorText: {
+    fontSize: 16,
+    color: "#ef4444",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  retryButton: {
+    backgroundColor: "#3b82f6",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  retryText: {
+    color: "white",
+    fontWeight: "500",
+  },
+  buttonText: {
+    color: "white",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+});
 
-      <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate("AddEditVehicle" as never)}>
-        <Plus size={24} color="#fff" />
-      </TouchableOpacity>
-    </View>
-  )
-}
-
-export default VehicleListScreen
+export default VehicleListScreen;
