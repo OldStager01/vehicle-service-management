@@ -6,20 +6,20 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { Home, Car, DollarSign, Bell, Settings } from "lucide-react-native"
 
 // Screens
-import HomeScreen from "../../screens/HomeScreen"
-import VehicleListScreen from "../../screens/VehicleListScreen"
-import AddEditVehicleScreen from "../../screens/AddEditVehicleScreen"
-import ServiceHistoryScreen from "../../screens/ServiceHistoryScreen"
-import ExpenseTrackerScreen from "../../screens/ExpenseTrackerScreen"
-import RemindersScreen from "../../screens/RemindersScreen"
-import WorkshopBookingScreen from "../../screens/WorkshopBookingScreen"
-import SettingsScreen from "../../screens/SettingsScreen"
+import HomeScreen from "./screens/HomeScreen"
+import VehicleListScreen from "./screens/VehicleListScreen"
+import AddEditVehicleScreen from "./screens/AddEditVehicleScreen"
+import ServiceHistoryScreen from "./screens/ServiceHistoryScreen"
+import ExpenseTrackerScreen from "./screens/ExpenseTrackerScreen"
+import RemindersScreen from "./screens/RemindersScreen"
+import WorkshopBookingScreen from "./screens/WorkshopBookingScreen"
+import SettingsScreen from "./screens/SettingsScreen"
 
 // Theme
-import { ThemeProvider } from "../../context/ThemeContext"
+import { ThemeProvider } from "./context/ThemeContext"
 
 // Navigation Types
-import type { RootStackParamList, MainTabParamList } from "../../types/NavigationTypes"
+import type { RootStackParamList, MainTabParamList } from "./types/NavigationTypes"
 
 const Tab = createBottomTabNavigator<MainTabParamList>()
 const Stack = createNativeStackNavigator<RootStackParamList>()
@@ -81,7 +81,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <SafeAreaProvider>
-        {/* <NavigationContainer> */}
+        <NavigationContainer>
           <Stack.Navigator>
             <Stack.Screen name="Main" component={TabNavigator} options={{ headerShown: false }} />
             <Stack.Screen
@@ -103,7 +103,7 @@ export default function App() {
               options={{ title: "Book Workshop" }}
             />
           </Stack.Navigator>
-        {/* </NavigationContainer> */}
+        </NavigationContainer>
         <StatusBar style="auto" />
       </SafeAreaProvider>
     </ThemeProvider>
